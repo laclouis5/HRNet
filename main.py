@@ -229,7 +229,9 @@ class FirstStage(nn.Sequential):
         out_channels = expansion * in_channels
         super().__init__(
             ExpandedBottleneck(channels=in_channels, expansion=expansion),
-            *[Bottleneck(channels=out_channels, expansion=expansion)] * (conv_reps - 1),
+            Bottleneck(channels=out_channels, expansion=expansion),
+            Bottleneck(channels=out_channels, expansion=expansion),
+            Bottleneck(channels=out_channels, expansion=expansion),
         )
 
     def forward(self, input: torch.Tensor) -> list[torch.Tensor]:
