@@ -278,12 +278,39 @@ class HRNet32Backbone(nn.Sequential):
         )
 
 
+from torch.utils.data import Dataset, DataLoader
+
+
+class DS(Dataset):
+    def __len__(self) -> int:
+        return 100
+
+    def __getitem__(self, _) -> torch.Tensor:
+        return torch.randn(3, 512, 512)
+
+
 def main():
     from pytorch_model_summary import summary
+    from tqdm import tqdm
 
-    net = HRNet32Backbone(in_channels=3)
-    x = torch.randn(1, 3, 512, 512)
+    device = torch.device("mps")
+
+    net = HRNet32Backbone(in_channels=3).to(device=device)
+    x = torch.randn(1, 3, 512, 512, device=device)
     print(summary(net, x))
+
+    ds = DS()
+    dl = DataLoader(
+        dataset=ds,
+        batch_size=1,
+        num_workers=4,
+        multiprocessing_context="forkserver",
+        persistent_workers=True,
+    )
+
+    for batch in tqdm(dl):
+        batch = batch.to(device=device)
+        _, _, _, _ = net(batch)
 
 
 if __name__ == "__main__":
