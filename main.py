@@ -4,12 +4,7 @@ from torch import nn
 
 def conv1x1(in_channels: int, out_channels: int) -> nn.Conv2d:
     return nn.Conv2d(
-        in_channels=in_channels,
-        out_channels=out_channels,
-        kernel_size=1,
-        stride=1,
-        padding=0,
-        bias=False,
+        in_channels=in_channels, out_channels=out_channels, kernel_size=1, bias=False
     )
 
 
@@ -24,14 +19,30 @@ def conv3x3(in_channels: int, out_channels, stride: int = 1) -> nn.Conv2d:
     )
 
 
+class Conv1x1Block(nn.Sequential):
+    def __init__(self, in_channels: int, out_channels: int):
+        super().__init__(
+            conv1x1(in_channels=in_channels, out_channels=out_channels),
+            nn.BatchNorm2d(num_features=out_channels),
+            nn.ReLU(inplace=True),
+        )
+
+
+class Conv3x3Block(nn.Sequential):
+    def __init__(self, in_channels: int, out_channels: int, stride: int = 1):
+        super().__init__(
+            conv3x3(in_channels=in_channels, out_channels=out_channels, stride=stride),
+            nn.BatchNorm2d(num_features=out_channels),
+            nn.ReLU(inplace=True),
+        )
+
+
 class ConvRes(nn.Module):
     def __init__(self, channels: int) -> None:
         super().__init__()
 
         self.layer = nn.Sequential(
-            conv3x3(in_channels=channels, out_channels=channels),
-            nn.BatchNorm2d(num_features=channels),
-            nn.ReLU(inplace=True),
+            Conv3x3Block(in_channels=channels, out_channels=channels),
             conv3x3(in_channels=channels, out_channels=channels),
             nn.BatchNorm2d(num_features=channels),
         )
@@ -48,12 +59,8 @@ class Bottleneck(nn.Module):
         inter_channels = channels // expansion
 
         self.layer = nn.Sequential(
-            conv1x1(in_channels=channels, out_channels=inter_channels),
-            nn.BatchNorm2d(num_features=inter_channels),
-            nn.ReLU(inplace=True),
-            conv3x3(in_channels=inter_channels, out_channels=inter_channels),
-            nn.BatchNorm2d(num_features=inter_channels),
-            nn.ReLU(inplace=True),
+            Conv1x1Block(in_channels=channels, out_channels=inter_channels),
+            Conv3x3Block(in_channels=inter_channels, out_channels=inter_channels),
             conv1x1(in_channels=inter_channels, out_channels=channels),
             nn.BatchNorm2d(num_features=channels),
         )
@@ -70,12 +77,8 @@ class ExpandedBottleneck(nn.Module):
         out_channels = channels * expansion
 
         self.layer = nn.Sequential(
-            conv1x1(in_channels=channels, out_channels=channels),
-            nn.BatchNorm2d(num_features=channels),
-            nn.ReLU(inplace=True),
-            conv3x3(in_channels=channels, out_channels=channels),
-            nn.BatchNorm2d(num_features=channels),
-            nn.ReLU(inplace=True),
+            Conv1x1Block(in_channels=channels, out_channels=channels),
+            Conv3x3Block(in_channels=channels, out_channels=channels),
             conv1x1(in_channels=channels, out_channels=out_channels),
             nn.BatchNorm2d(num_features=out_channels),
         )
@@ -103,11 +106,7 @@ class Up(nn.Sequential):
 class Down(nn.Sequential):
     def __init__(self, r: int, in_channels: int, out_channels: int) -> None:
         layers = [
-            nn.Sequential(
-                conv3x3(in_channels=in_channels, out_channels=in_channels, stride=2),
-                nn.BatchNorm2d(num_features=in_channels),
-                nn.ReLU(inplace=True),
-            )
+            Conv3x3Block(in_channels=in_channels, out_channels=in_channels, stride=2)
             for _ in range(r - 1)
         ]
 
@@ -197,24 +196,16 @@ class Adaptor(nn.Module):
 
     def _layer(self, i: int) -> nn.Module:
         if i == self.s:  # New stream
-            return nn.Sequential(
-                conv3x3(
-                    in_channels=self.in_channels[-1],
-                    out_channels=self.out_channels[i],
-                    stride=2,
-                ),
-                nn.BatchNorm2d(num_features=self.out_channels[i]),
-                nn.ReLU(inplace=True),
+            return Conv3x3Block(
+                in_channels=self.in_channels[-1],
+                out_channels=self.out_channels[i],
+                stride=2,
             )
 
         # Adapt #channels
         if self.in_channels[i] != self.out_channels[i]:
-            return nn.Sequential(
-                conv3x3(
-                    in_channels=self.in_channels[i], out_channels=self.out_channels[i]
-                ),
-                nn.BatchNorm2d(num_features=self.out_channels[i]),
-                nn.ReLU(inplace=True),
+            return Conv3x3Block(
+                in_channels=self.in_channels[i], out_channels=self.out_channels[i]
             )
 
         return nn.Identity()
@@ -228,12 +219,8 @@ class Adaptor(nn.Module):
 class Stem(nn.Sequential):
     def __init__(self, in_channels: int, out_channels: int):
         super().__init__(
-            conv3x3(in_channels=in_channels, out_channels=out_channels, stride=2),
-            nn.BatchNorm2d(num_features=out_channels),
-            nn.ReLU(inplace=True),
-            conv3x3(in_channels=out_channels, out_channels=out_channels, stride=2),
-            nn.BatchNorm2d(num_features=out_channels),
-            nn.ReLU(inplace=True),
+            Conv3x3Block(in_channels=in_channels, out_channels=out_channels, stride=2),
+            Conv3x3Block(in_channels=out_channels, out_channels=out_channels, stride=2),
         )
 
 
