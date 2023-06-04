@@ -2,25 +2,25 @@ import torch
 from torch import nn
 
 
-def conv1x1(in_channels: int, out_channels: int, bias=False) -> nn.Conv2d:
+def conv1x1(in_channels: int, out_channels: int) -> nn.Conv2d:
     return nn.Conv2d(
         in_channels=in_channels,
         out_channels=out_channels,
         kernel_size=1,
         stride=1,
         padding=0,
-        bias=bias,
+        bias=False,
     )
 
 
-def conv3x3(in_channels: int, out_channels, stride: int = 1, bias=False) -> nn.Conv2d:
+def conv3x3(in_channels: int, out_channels, stride: int = 1) -> nn.Conv2d:
     return nn.Conv2d(
         in_channels=in_channels,
         out_channels=out_channels,
         kernel_size=3,
         stride=stride,
         padding=1,
-        bias=bias,
+        bias=False,
     )
 
 
@@ -238,13 +238,11 @@ class Stem(nn.Sequential):
 
 
 class FirstStage(nn.Sequential):
-    def __init__(self, in_channels: int, expansion: int = 4):
+    def __init__(self, in_channels: int, conv_reps: int, expansion: int = 4):
         out_channels = expansion * in_channels
         super().__init__(
             ExpandedBottleneck(channels=in_channels, expansion=expansion),
-            Bottleneck(channels=out_channels, expansion=4),
-            Bottleneck(channels=out_channels, expansion=4),
-            Bottleneck(channels=out_channels, expansion=4),
+            *[Bottleneck(channels=out_channels, expansion=expansion)] * (conv_reps - 1),
         )
 
     def forward(self, input: torch.Tensor) -> list[torch.Tensor]:
@@ -261,7 +259,7 @@ class Stage(nn.Sequential):
     ):
         super().__init__(
             Adaptor(in_channels=in_channels, out_channels=out_channels),
-            *(HRBlock(channels=out_channels, reps=conv_reps) for _ in range(reps))
+            *(HRBlock(channels=out_channels, reps=conv_reps) for _ in range(reps)),
         )
 
 
@@ -269,20 +267,20 @@ class HRNet32Backbone(nn.Sequential):
     def __init__(self, in_channels: int = 3):
         super().__init__(
             Stem(in_channels=in_channels, out_channels=64),
-            FirstStage(in_channels=64, expansion=4),
-            Stage(
+            FirstStage(in_channels=64, conv_reps=4),
+            Stage(  # 2
                 in_channels=[256],
                 out_channels=[32, 64],
                 conv_reps=[4, 4],
                 reps=1,
             ),
-            Stage(
+            Stage(  # 3
                 in_channels=[32, 64],
                 out_channels=[32, 64, 128],
                 conv_reps=[4, 4, 4],
                 reps=4,
             ),
-            Stage(
+            Stage(  # 4
                 in_channels=[32, 64, 128],
                 out_channels=[32, 64, 128, 256],
                 conv_reps=[4, 4, 4, 4],
