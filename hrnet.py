@@ -97,7 +97,7 @@ class ExpandedBottleneck(nn.Module):
 class Up(nn.Sequential):
     def __init__(self, d: int, in_channels: int, out_channels: int) -> None:
         super().__init__(
-            nn.UpsamplingBilinear2d(scale_factor=2**d),
+            nn.Upsample(scale_factor=2**d, mode="bilinear", align_corners=True),
             conv1x1(in_channels=in_channels, out_channels=out_channels),
             nn.BatchNorm2d(num_features=out_channels),
         )
