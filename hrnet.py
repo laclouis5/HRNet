@@ -270,8 +270,6 @@ def main():
 
     net = HRNet32(in_channels=3)
     x = torch.randn(1, 3, 512, 512)
-    _ = net(x)
-
     print(summary(net, x))
 
 
