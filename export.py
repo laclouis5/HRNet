@@ -35,10 +35,11 @@ def export_coreml(model: nn.Module, shape: list[int], filepath: str):
 
 
 def main():
-    from hrnet import HRNet32Backbone
+    from hrnet import HRNet32
 
-    net = HRNet32Backbone(in_channels=3)
+    net = HRNet32(in_channels=3)
     shape = [1, 3, 512, 512]
+
     export_onnx(model=net, shape=shape, filepath="runs/exports/hrnet.onnx")
     export_coreml(model=net, shape=shape, filepath="runs/exports/hrnet.mlpackage")
 
