@@ -36,6 +36,10 @@ def export_coreml(model: nn.Module, shape: list[int], filepath: str):
 
 def main():
     from hrnet import HRNet32
+    from pathlib import Path
+
+    Path("runs/").mkdir(exist_ok=True)
+    Path("runs/exports/").mkdir(exist_ok=True)
 
     net = HRNet32(in_channels=3)
     shape = [1, 3, 512, 512]

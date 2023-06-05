@@ -19,5 +19,11 @@ poetry install
 ## Show the Network Summary
 
 ```shell
-poetry run python hrnet.py
+poetry run summary
+```
+
+## Export HRNet to ONNX and CoreML
+
+```shell
+poetry run export
 ```

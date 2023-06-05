@@ -13,7 +13,10 @@ pytorch-model-summary = "^0.1.2"
 coremltools = "^6.3.0"
 onnx = "^1.14.0"
 
-
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+summary = "hrnet:main"
+export = "export:main"
