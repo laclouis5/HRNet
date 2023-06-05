@@ -22,7 +22,7 @@ def export_onnx(model: torch.ScriptModule, shape: list[int], filepath: str):
 
 
 def export_coreml(model: nn.Module, shape: list[int], filepath: str):
-    model_torchscript = net = convert_torchscript(model, shape=shape)
+    model_torchscript = convert_torchscript(model, shape=shape)
 
     ml_model = ct.convert(
         model=model_torchscript,
