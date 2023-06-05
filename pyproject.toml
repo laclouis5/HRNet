@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "hrnet"
 version = "0.1.0"
-description = ""
+description = "Comprehensive and modularized implementation of HRNet."
 authors = ["Louis Lac <lac.louis5@gmail.com>"]
 license = "MIT"
 readme = "README.md"
