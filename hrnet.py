@@ -118,28 +118,26 @@ class Down(nn.Sequential):
         super().__init__(*layers, last_layer)
 
 
-class FusionStream(nn.Module):
+class FusionBranch(nn.Module):
     def __init__(self, r: int, channels: list[int]) -> None:
         super().__init__()
 
         self.channels = channels
         self.relu = nn.ReLU(inplace=True)
-        self.layers = nn.ModuleList(self.fir(i=i, r=r) for i in range(len(channels)))
+        self.layers = nn.ModuleList(self.fsr(s=s, r=r) for s in range(len(channels)))
 
-    def fir(self, i: int, r: int) -> nn.Module:
-        c1, c2 = self.channels[i], self.channels[r]
+    def fsr(self, s: int, r: int) -> nn.Module:
+        c1, c2 = self.channels[s], self.channels[r]
 
-        if i == r:  # Id
+        if s == r:  # Id
             return nn.Identity()
-
-        if i < r:  # Down
-            return Down(d=r - i, in_channels=c1, out_channels=c2)
-
-        # Up
-        return Up(d=i - r, in_channels=c1, out_channels=c2)
+        elif s < r:  # Down
+            return Down(d=r - s, in_channels=c1, out_channels=c2)
+        else:  # Up
+            return Up(d=s - r, in_channels=c1, out_channels=c2)
 
     def forward(self, inputs: list[torch.Tensor]) -> torch.Tensor:
-        outputs = [layer(input) for input, layer in zip(inputs, self.layers)]
+        outputs = (layer(input) for input, layer in zip(inputs, self.layers))
         return self.relu(sum(outputs))
 
 
@@ -148,7 +146,7 @@ class Fusion(nn.Module):
         super().__init__()
 
         self.layers = nn.ModuleList(
-            FusionStream(r=r, channels=channels) for r in range(len(channels))
+            FusionBranch(r=r, channels=channels) for r in range(len(channels))
         )
 
     def forward(self, inputs: list[torch.Tensor]) -> list[torch.Tensor]:
@@ -174,7 +172,7 @@ class HRBlock(nn.Module):
         return self.fusion(outputs)
 
 
-class Adaptor(nn.Module):
+class Transition(nn.Module):
     def __init__(self, in_channels: list[int], out_channels: list[int]):
         super().__init__()
 
@@ -191,14 +189,12 @@ class Adaptor(nn.Module):
                 out_channels=self.out_channels[i],
                 stride=2,
             )
-
-        if self.in_channels[i] != self.out_channels[i]:  # Adapt #channels
+        elif self.in_channels[i] != self.out_channels[i]:  # Adapt #channels
             return Conv3x3Block(
                 in_channels=self.in_channels[i], out_channels=self.out_channels[i]
             )
-
-        # No adaptation
-        return nn.Identity()
+        else:  # No adaptation
+            return nn.Identity()
 
     def forward(self, inputs: list[torch.Tensor]) -> list[torch.Tensor]:
         outputs = [layer(input) for input, layer in zip(inputs, self.layers)]
@@ -219,9 +215,7 @@ class FirstStage(nn.Sequential):
         out_channels = expansion * in_channels
         super().__init__(
             ExpandedBottleneck(channels=in_channels, expansion=expansion),
-            Bottleneck(channels=out_channels, expansion=expansion),
-            Bottleneck(channels=out_channels, expansion=expansion),
-            Bottleneck(channels=out_channels, expansion=expansion),
+            *(Bottleneck(channels=out_channels, expansion=expansion) for _ in range(3)),
         )
 
     def forward(self, input: torch.Tensor) -> list[torch.Tensor]:
@@ -237,7 +231,7 @@ class Stage(nn.Sequential):
         nb_blocks: int,
     ):
         super().__init__(
-            Adaptor(in_channels=in_channels, out_channels=out_channels),
+            Transition(in_channels=in_channels, out_channels=out_channels),
             *(
                 HRBlock(channels=out_channels, nb_convs=nb_convs)
                 for _ in range(nb_blocks)
@@ -245,7 +239,7 @@ class Stage(nn.Sequential):
         )
 
 
-class HRNet32Backbone(nn.Sequential):
+class HRNet32(nn.Sequential):
     def __init__(self, in_channels: int = 3):
         super().__init__(
             Stem(in_channels=in_channels, out_channels=64),
@@ -274,8 +268,10 @@ class HRNet32Backbone(nn.Sequential):
 def main():
     from pytorch_model_summary import summary
 
-    net = HRNet32Backbone(in_channels=3)
+    net = HRNet32(in_channels=3)
     x = torch.randn(1, 3, 512, 512)
+    _ = net(x)
+
     print(summary(net, x))
 
 
