@@ -39,8 +39,8 @@ def main():
 
     net = HRNet32Backbone(in_channels=3)
     shape = [1, 3, 512, 512]
-    export_onnx(model=net, shape=shape, filepath="exports/hrnet.onnx")
-    export_coreml(model=net, shape=shape, filepath="exports/hrnet.mlpackage")
+    export_onnx(model=net, shape=shape, filepath="runs/exports/hrnet.onnx")
+    export_coreml(model=net, shape=shape, filepath="runs/exports/hrnet.mlpackage")
 
 
 if __name__ == "__main__":
