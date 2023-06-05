@@ -239,6 +239,32 @@ class Stage(nn.Sequential):
         )
 
 
+class HRNet18(nn.Sequential):
+    def __init__(self, in_channels: int = 3):
+        super().__init__(
+            Stem(in_channels=in_channels, out_channels=64),
+            FirstStage(in_channels=64),
+            Stage(  # 2
+                in_channels=[256],
+                out_channels=[18, 36],
+                nb_convs=[4, 4],
+                nb_blocks=1,
+            ),
+            Stage(  # 3
+                in_channels=[18, 36],
+                out_channels=[18, 36, 72],
+                nb_convs=[4, 4, 4],
+                nb_blocks=4,
+            ),
+            Stage(  # 4
+                in_channels=[18, 36, 72],
+                out_channels=[18, 36, 72, 144],
+                nb_convs=[4, 4, 4, 4],
+                nb_blocks=3,
+            ),
+        )
+
+
 class HRNet32(nn.Sequential):
     def __init__(self, in_channels: int = 3):
         super().__init__(
@@ -265,10 +291,36 @@ class HRNet32(nn.Sequential):
         )
 
 
+class HRNet48(nn.Sequential):
+    def __init__(self, in_channels: int = 3):
+        super().__init__(
+            Stem(in_channels=in_channels, out_channels=64),
+            FirstStage(in_channels=64),
+            Stage(  # 2
+                in_channels=[256],
+                out_channels=[48, 96],
+                nb_convs=[4, 4],
+                nb_blocks=1,
+            ),
+            Stage(  # 3
+                in_channels=[48, 96],
+                out_channels=[48, 96, 192],
+                nb_convs=[4, 4, 4],
+                nb_blocks=4,
+            ),
+            Stage(  # 4
+                in_channels=[48, 96, 192],
+                out_channels=[48, 96, 192, 384],
+                nb_convs=[4, 4, 4, 4],
+                nb_blocks=3,
+            ),
+        )
+
+
 def main():
     from pytorch_model_summary import summary
 
-    net = HRNet32(in_channels=3)
+    net = HRNet18(in_channels=3)
     x = torch.randn(1, 3, 512, 512)
     print(summary(net, x))
 
