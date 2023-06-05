@@ -12,6 +12,7 @@ torch = "^2.0.1"
 pytorch-model-summary = "^0.1.2"
 coremltools = "^6.3.0"
 onnx = "^1.14.0"
+yacs = "^0.1.8"
 
 [build-system]
 requires = ["poetry-core"]
