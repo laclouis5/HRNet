@@ -2,20 +2,22 @@ import torch
 from torch import nn
 
 
-def conv1x1(in_channels: int, out_channels: int) -> nn.Conv2d:
+def conv1x1(in_channels: int, out_channels: int, bias: bool = False) -> nn.Conv2d:
     return nn.Conv2d(
-        in_channels=in_channels, out_channels=out_channels, kernel_size=1, bias=False
+        in_channels=in_channels, out_channels=out_channels, kernel_size=1, bias=bias
     )
 
 
-def conv3x3(in_channels: int, out_channels: int, stride: int = 1) -> nn.Conv2d:
+def conv3x3(
+    in_channels: int, out_channels: int, stride: int = 1, bias: bool = False
+) -> nn.Conv2d:
     return nn.Conv2d(
         in_channels=in_channels,
         out_channels=out_channels,
         kernel_size=3,
         stride=stride,
         padding=1,
-        bias=False,
+        bias=bias,
     )
 
 
@@ -315,6 +317,36 @@ class HRNet48(nn.Sequential):
                 nb_blocks=3,
             ),
         )
+
+
+class HeadV1(nn.Module):
+    def forward(self, inputs: list[torch.Tensor]) -> torch.Tensor:
+        return inputs[0]
+
+
+class HeadV2(nn.Module):
+    def __init__(self, in_channels: list[int], out_channels: int) -> None:
+        super().__init__()
+        channels = sum(in_channels)
+
+        self.layers = nn.ModuleList(
+            nn.Upsample(scale_factor=2**d, mode="bilinear", align_corners=True)
+            for d in range(1, len(in_channels))
+        )
+
+        # Small divergence from the original implementation which seems to
+        # keep biases in the first conv1x1.
+        self.last_layer = nn.Sequential(
+            Conv1x1Block(in_channels=channels, out_channels=channels),
+            conv1x1(in_channels=channels, out_channels=out_channels, bias=False),
+        )
+
+    def forward(self, inputs: list[torch.Tensor]):
+        outputs = [inputs[0]] + [
+            layer(input) for input, layer in zip(inputs[1:], self.layers)
+        ]
+        output = torch.cat(outputs, dim=1)
+        return self.last_layer(output)
 
 
 def main():
